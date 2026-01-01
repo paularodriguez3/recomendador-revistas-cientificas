@@ -124,18 +124,10 @@ def plot_model_comparison(
     plt.savefig(out_path, dpi=300)
     plt.close()
 
-
-# -------------------------------------------------
-# MAIN
-# -------------------------------------------------
-
 def main():
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
-    # -------------------------------
-    # 1) Matrices de confusión
-    # -------------------------------
-
+    # Matrices de confusión
     plot_confusion_from_csv(
         REPORTS_DIR / "classic_confusion_matrix.csv",
         REPORTS_DIR / "classic_confusion_matrix.png",
@@ -148,10 +140,7 @@ def main():
         "Confusion Matrix – Transformer (DistilBERT)"
     )
 
-    # -------------------------------
-    # 2) F1 por clase
-    # -------------------------------
-
+    # F1 por clase
     classic_f1 = extract_f1_from_report(
         REPORTS_DIR / "classic_report.txt"
     )
@@ -171,10 +160,7 @@ def main():
         REPORTS_DIR / "transformer_f1.png"
     )
 
-    # -------------------------------
-    # 3) Comparación global
-    # -------------------------------
-
+    # Comparación global
     classic_metrics = {
         "accuracy": 0.8213,
         "macro_f1": 0.7359

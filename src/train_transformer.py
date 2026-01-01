@@ -176,7 +176,7 @@ def main():
         encoding="utf-8"
     )
 
-    # 10) Guardar modelo final
+    # 10) Guardar modelo
     model.save_pretrained(BERT_DIR / "final_model")
     tokenizer.save_pretrained(BERT_DIR / "final_model")
 
