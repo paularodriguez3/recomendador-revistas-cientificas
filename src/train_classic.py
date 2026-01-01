@@ -72,21 +72,27 @@ def main():
     report = classification_report(y_test, y_pred, digits=4)
     cm = confusion_matrix(y_test, y_pred)
 
-    print("\n--- INFORME DE CLASIFICACIÓN (CLÁSICO) ---")
+    print("\n--- INFORME DE CLASIFICACIÓN (MODELO CLÁSICO) ---")
     print(report)
     print("Dimensión de la matriz de confusión:", cm.shape)
 
     # 8) Guardar reportes
     (REPORTS_DIR / "classic_report.txt").write_text(report, encoding="utf-8")
-    pd.DataFrame(cm).to_csv(
+
+    pd.DataFrame(
+        cm,
+        index=sorted(y.unique()),
+        columns=sorted(y.unique())
+    ).to_csv(
         REPORTS_DIR / "classic_confusion_matrix.csv",
-        index=False
+        encoding="utf-8"
     )
 
     # 9) Guardar modelo
     joblib.dump(pipe, MODELS_DIR / "tfidf_linear_svm.joblib")
-    print(f"\nModelo guardado en {MODELS_DIR}")
-    print(f"Reportes guardados en {REPORTS_DIR}")
+
+    print(f"\nModelo guardado en: {MODELS_DIR}")
+    print(f"Reportes guardados en: {REPORTS_DIR}")
 
 
 if __name__ == "__main__":

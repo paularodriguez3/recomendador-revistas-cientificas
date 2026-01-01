@@ -9,7 +9,12 @@ import pandas as pd
 import torch
 
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import f1_score, accuracy_score, classification_report, confusion_matrix
+from sklearn.metrics import (
+    f1_score,
+    accuracy_score,
+    classification_report,
+    confusion_matrix
+)
 
 from transformers import (
     AutoTokenizer,
@@ -25,10 +30,10 @@ SEED = 42
 MODEL_NAME = "distilbert-base-uncased"
 MAX_LENGTH = 256
 
+
 def compute_metrics(eval_pred):
     """
-    Calcula métricas de evaluación a partir de las predicciones
-    del modelo durante validación.
+    Métricas calculadas durante la evaluación del modelo
     """
     logits, labels = eval_pred
     preds = np.argmax(logits, axis=-1)
@@ -37,6 +42,7 @@ def compute_metrics(eval_pred):
         "macro_f1": f1_score(labels, preds, average="macro"),
         "weighted_f1": f1_score(labels, preds, average="weighted"),
     }
+
 
 def main():
     set_seed(SEED)
@@ -47,11 +53,12 @@ def main():
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     BERT_DIR.mkdir(parents=True, exist_ok=True)
 
+    # 1) Cargar dataset
     df = pd.read_csv(DATASET_CSV)
     df["text"] = df["text"].astype(str)
     df["journal"] = df["journal"].astype(str)
 
-    # Codificación de etiquetas (revistas - enteros)
+    # 2) Codificación de etiquetas
     labels_sorted = sorted(df["journal"].unique())
     label2id = {lab: i for i, lab in enumerate(labels_sorted)}
     id2label = {i: lab for lab, i in label2id.items()}
@@ -60,9 +67,10 @@ def main():
     X = df["text"]
     y = df["label_id"]
 
-    # División train / test estratificada
+    # 3) División train / test estratificada
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y,
+        X,
+        y,
         test_size=0.2,
         random_state=SEED,
         stratify=y
@@ -71,15 +79,10 @@ def main():
     train_df = pd.DataFrame({"text": X_train.values, "labels": y_train.values})
     test_df = pd.DataFrame({"text": X_test.values, "labels": y_test.values})
 
-    # Carga del tokenizer del modelo Transformer
+    # 4) Tokenizer
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
     def tokenize_batch(batch):
-        """
-        Tokenización por lotes:
-        - truncado de textos largos
-        - padding hasta longitud fija
-        """
         return tokenizer(
             batch["text"],
             truncation=True,
@@ -87,7 +90,7 @@ def main():
             max_length=MAX_LENGTH
         )
 
-    # Conversión a HuggingFace Datasets
+    # 5) HuggingFace Datasets
     from datasets import Dataset
     train_ds = Dataset.from_pandas(train_df)
     test_ds = Dataset.from_pandas(test_df)
@@ -95,13 +98,18 @@ def main():
     train_ds = train_ds.map(tokenize_batch, batched=True)
     test_ds = test_ds.map(tokenize_batch, batched=True)
 
-    train_ds = train_ds.remove_columns(["text", "__index_level_0__"]) if "__index_level_0__" in train_ds.column_names else train_ds.remove_columns(["text"])
-    test_ds = test_ds.remove_columns(["text", "__index_level_0__"]) if "__index_level_0__" in test_ds.column_names else test_ds.remove_columns(["text"])
+    train_ds = train_ds.remove_columns(
+        ["text", "__index_level_0__"]
+    ) if "__index_level_0__" in train_ds.column_names else train_ds.remove_columns(["text"])
+
+    test_ds = test_ds.remove_columns(
+        ["text", "__index_level_0__"]
+    ) if "__index_level_0__" in test_ds.column_names else test_ds.remove_columns(["text"])
 
     train_ds.set_format("torch")
     test_ds.set_format("torch")
 
-    # 6) Model
+    # 6) Modelo Transformer
     model = AutoModelForSequenceClassification.from_pretrained(
         MODEL_NAME,
         num_labels=len(labels_sorted),
@@ -109,7 +117,7 @@ def main():
         id2label=id2label
     )
 
-    # Argumentos de entrenamiento
+    # 7) Argumentos de entrenamiento
     args = TrainingArguments(
         output_dir=str(BERT_DIR / "checkpoints"),
         num_train_epochs=3,
@@ -137,14 +145,17 @@ def main():
         compute_metrics=compute_metrics,
     )
 
+    # 8) Entrenamiento
     trainer.train()
 
+    # 9) Evaluación final
     preds = trainer.predict(test_ds)
     y_pred = np.argmax(preds.predictions, axis=-1)
     y_true = test_df["labels"].values
 
     report = classification_report(
-        y_true, y_pred,
+        y_true,
+        y_pred,
         target_names=labels_sorted,
         digits=4
     )
@@ -156,7 +167,6 @@ def main():
 
     # Matriz de confusión
     cm = confusion_matrix(y_true, y_pred)
-
     pd.DataFrame(
         cm,
         index=labels_sorted,
@@ -166,11 +176,12 @@ def main():
         encoding="utf-8"
     )
 
+    # 10) Guardar modelo final
     model.save_pretrained(BERT_DIR / "final_model")
     tokenizer.save_pretrained(BERT_DIR / "final_model")
 
     print(f"\nModelo y tokenizer guardados en: {BERT_DIR / 'final_model'}")
-    print(f"Reporte guardado en: {REPORTS_DIR / 'transformer_report.txt'}")
+    print(f"Reportes guardados en: {REPORTS_DIR}")
 
 
 if __name__ == "__main__":

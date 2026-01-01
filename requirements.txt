@@ -9,3 +9,5 @@ accelerate
 torch
 scikit-learn
 joblib
+matplotlib
+seaborn
