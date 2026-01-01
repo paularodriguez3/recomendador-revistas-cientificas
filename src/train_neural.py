@@ -6,6 +6,7 @@ sys.path.append(str(PROJECT_ROOT))
 
 import pandas as pd
 import torch
+import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
 from collections import Counter
@@ -68,6 +69,62 @@ def collate_fn(batch):
 
     return padded, torch.tensor(labels)
 
+# Modelo BiLSTM
+class BiLSTMClassifier(nn.Module):
+    def __init__(
+        self,
+        vocab_size,
+        embedding_dim,
+        hidden_dim,
+        output_dim,
+        padding_idx=0,
+        dropout=0.3
+    ):
+        super().__init__()
+
+        # Capa de embedding
+        self.embedding = nn.Embedding(
+            num_embeddings=vocab_size,
+            embedding_dim=embedding_dim,
+            padding_idx=padding_idx
+        )
+
+        # BiLSTM
+        self.lstm = nn.LSTM(
+            input_size=embedding_dim,
+            hidden_size=hidden_dim,
+            num_layers=1,
+            bidirectional=True,
+            batch_first=True
+        )
+
+        # Dropout
+        self.dropout = nn.Dropout(dropout)
+
+        # Clasificador final
+        self.fc = nn.Linear(hidden_dim * 2, output_dim)
+
+    def forward(self, x):
+        """
+        x: [batch_size, seq_len]
+        """
+        embedded = self.embedding(x)
+        # embedded: [batch_size, seq_len, embedding_dim]
+
+        lstm_out, _ = self.lstm(embedded)
+        # lstm_out: [batch_size, seq_len, hidden_dim*2]
+
+        # Mean pooling sobre la dimensión temporal
+        pooled = torch.mean(lstm_out, dim=1)
+        # pooled: [batch_size, hidden_dim*2]
+
+        pooled = self.dropout(pooled)
+
+        logits = self.fc(pooled)
+        # logits: [batch_size, output_dim]
+
+        return logits
+
 def main():
     # Cargar dataset
     df = pd.read_csv(DATASET_CSV)
@@ -113,6 +170,19 @@ def main():
     )
 
     print("DataLoaders listos para usar.")
+
+    # Probar modelo
+    model = BiLSTMClassifier(
+        vocab_size=len(vocab),
+        embedding_dim=100,
+        hidden_dim=128,
+        output_dim=len(label_to_id)
+    )
+
+    sample_batch = next(iter(train_loader))[0]
+    output = model(sample_batch)
+
+    print("Salida del modelo:", output.shape)
 
 
 if __name__ == "__main__":
