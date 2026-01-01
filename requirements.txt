@@ -3,3 +3,5 @@ numpy
 tqdm
 scikit-learn
 joblib
+torch
+torchtext
