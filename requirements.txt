@@ -3,5 +3,9 @@ numpy
 tqdm
 scikit-learn
 joblib
+transformers
+datasets
+accelerate
 torch
-torchtext
+scikit-learn
+joblib

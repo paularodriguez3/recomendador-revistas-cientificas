@@ -12,3 +12,5 @@ DATASET_CSV = PROCESSED_DATA_DIR / "dataset.csv"
 
 # Modelos
 MODELS_DIR = BASE_DIR / "models"
+REPORTS_DIR = BASE_DIR / "reports"
+BERT_DIR = MODELS_DIR / "bert"
